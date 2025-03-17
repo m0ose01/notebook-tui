@@ -45,6 +45,10 @@ impl Library {
     fn initialise(&mut self) -> std::io::Result<()> {
         let directory_name = &self.title.to_ascii_lowercase().replace(" ", "-");
         std::fs::create_dir(&directory_name)?;
+
+        let metadata_file_name = format!("{}/{}", directory_name, "library.toml");
+        std::fs::File::create(&metadata_file_name)?;
+
         for folder in &mut self.folders {
             folder.initialise(&directory_name)?;
         }
@@ -75,6 +79,10 @@ impl Folder {
         let subdirectory_name = &self.title.to_ascii_lowercase().replace(" ", "-");
         let directory_name = format!("{}/{}", parent_folder, subdirectory_name);
         std::fs::create_dir(&directory_name)?;
+
+        let metadata_file_name = format!("{}/{}", directory_name, "folder.toml");
+        std::fs::File::create(&metadata_file_name)?;
+
         for note in &mut self.notes {
             note.initialise(&directory_name)?;
         }
@@ -111,8 +119,10 @@ impl Note {
         let directory_name = format!("{}/{}", parent_folder, subdirectory_name);
         std::fs::create_dir(&directory_name)?;
 
-        let full_file_name = format!("{}/{}", directory_name, "note.md");
-        std::fs::File::create(full_file_name)?;
+        let note_file_name = format!("{}/{}", directory_name, "note.md");
+        let metadata_file_name = format!("{}/{}", directory_name, "note.toml");
+        std::fs::File::create(note_file_name)?;
+        std::fs::File::create(metadata_file_name)?;
         self.initialised = true;
         Ok(())
     }
