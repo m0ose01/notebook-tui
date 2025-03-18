@@ -1,3 +1,7 @@
+use std::io::Write;
+
+use serde::Serialize;
+
 fn main() -> std::io::Result<()> {
 
     // TODO; Define directory structure for notes, allow tags, folders.
@@ -25,9 +29,8 @@ fn main() -> std::io::Result<()> {
 }
 
 struct Library {
-    title: String,
-    tags: Vec<String>,
     folders: Vec<Folder>,
+    metadata: LibraryMetadata,
     initialised: bool,
 }
 
@@ -35,19 +38,19 @@ impl Library {
     fn new(title: &str, tags: Vec<String>, folders: Vec<Folder>) -> Self {
         let title = title.to_string();
         Self {
-            title,
-            tags,
             folders,
+            metadata: LibraryMetadata{title, tags},
             initialised: false,
         }
     }
 
     fn initialise(&mut self) -> std::io::Result<()> {
-        let directory_name = &self.title.to_ascii_lowercase().replace(" ", "-");
+        let directory_name = &self.metadata.title.to_ascii_lowercase().replace(" ", "-");
         std::fs::create_dir(&directory_name)?;
 
         let metadata_file_name = format!("{}/{}", directory_name, "library.toml");
-        std::fs::File::create(&metadata_file_name)?;
+        let mut metadata_file = std::fs::File::create(metadata_file_name)?;
+        metadata_file.write_all(toml::to_string(&self.metadata).expect("could not convert to TOML").as_bytes())?;
 
         for folder in &mut self.folders {
             folder.initialise(&directory_name)?;
@@ -57,10 +60,15 @@ impl Library {
     }
 }
 
-struct Folder {
+#[derive(Serialize)]
+struct LibraryMetadata {
     title: String,
     tags: Vec<String>,
+}
+
+struct Folder {
     notes: Vec<Note>,
+    metadata: FolderMetadata,
     initialised: bool,
 }
 
@@ -68,20 +76,20 @@ impl Folder {
     fn new(title: &str, tags: Vec<String>, notes: Vec<Note>) -> Self {
         let title = title.to_string();
         Self {
-            title,
-            tags,
             notes,
+            metadata: FolderMetadata{title, tags},
             initialised: false,
         }
     }
 
     fn initialise(&mut self, parent_folder: &str) -> std::io::Result<()> {
-        let subdirectory_name = &self.title.to_ascii_lowercase().replace(" ", "-");
+        let subdirectory_name = &self.metadata.title.to_ascii_lowercase().replace(" ", "-");
         let directory_name = format!("{}/{}", parent_folder, subdirectory_name);
         std::fs::create_dir(&directory_name)?;
 
         let metadata_file_name = format!("{}/{}", directory_name, "folder.toml");
-        std::fs::File::create(&metadata_file_name)?;
+        let mut metadata_file = std::fs::File::create(metadata_file_name)?;
+        metadata_file.write_all(toml::to_string(&self.metadata).expect("could not convert to TOML").as_bytes())?;
 
         for note in &mut self.notes {
             note.initialise(&directory_name)?;
@@ -91,11 +99,14 @@ impl Folder {
     }
 }
 
-struct Note {
+#[derive(Serialize)]
+struct FolderMetadata {
     title: String,
     tags: Vec<String>,
-    author: String, // TODO: implement an author type
-    date: String, // TODO: change this to a date type from a suitable crate
+}
+
+struct Note {
+    metadata: NoteMetadata,
     initialised: bool,
 }
 
@@ -106,24 +117,30 @@ impl Note {
         let date = date.to_string();
 
         Self {
-            title,
-            tags,
-            author,
-            date,
+            metadata: NoteMetadata { title, tags, author, date },
             initialised: false,
         }
     }
 
     fn initialise(&mut self, parent_folder: &str) -> std::io::Result<()> {
-        let subdirectory_name = &self.title.to_ascii_lowercase().replace(" ", "-");
+        let subdirectory_name = &self.metadata.title.to_ascii_lowercase().replace(" ", "-");
         let directory_name = format!("{}/{}", parent_folder, subdirectory_name);
         std::fs::create_dir(&directory_name)?;
 
         let note_file_name = format!("{}/{}", directory_name, "note.md");
         let metadata_file_name = format!("{}/{}", directory_name, "note.toml");
         std::fs::File::create(note_file_name)?;
-        std::fs::File::create(metadata_file_name)?;
+        let mut metadata_file = std::fs::File::create(metadata_file_name)?;
+        metadata_file.write_all(toml::to_string(&self.metadata).expect("could not convert to TOML").as_bytes())?;
         self.initialised = true;
         Ok(())
     }
+}
+
+#[derive(Serialize)]
+struct NoteMetadata {
+    title: String,
+    tags: Vec<String>,
+    author: String, // TODO: implement an author type
+    date: String, // TODO: change this to a date type from a suitable crate
 }
