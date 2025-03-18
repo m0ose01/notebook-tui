@@ -1,9 +1,26 @@
 use std::io::Write;
 use std::path::Path;
 
+use clap::{Parser, Subcommand};
 use serde::{Deserialize, Serialize};
 
+#[derive(Parser)]
+struct Args {
+    #[command(subcommand)]
+    command: Commands,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    /// Create a new library.
+    New { name: String },
+    /// Open an existing library.
+    Open { name: String },
+}
+
 fn main() -> std::io::Result<()> {
+
+    let args = Args::parse();
 
     // TODO; Define directory structure for notes, allow tags, folders.
 
@@ -19,17 +36,19 @@ fn main() -> std::io::Result<()> {
 
     // TODO: Implement creation of notes from PDF slides.
 
-    {
+    if let Commands::New { name: title } = &args.command {
         let tag = "mytag".to_string();
         let note = Note::new("Test Note", vec![tag.clone()], "me", "2025-03-17");
         let folder = Folder::new("Test Folder", vec![tag.clone()], vec![note]);
-        let mut library = Library::new("Test Lib", vec![tag], vec![folder]);
+        let mut library = Library::new(&title, vec![tag], vec![folder]);
 
         library.initialise()?;
     }
 
-    let library = Library::open("./test-lib")?;
-    println!("{:?}", library);
+    if let Commands::Open { name: title } = &args.command {
+        let library = Library::open(&title)?;
+        println!("{:?}", library);
+    }
 
     Ok(())
 }
