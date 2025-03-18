@@ -36,13 +36,21 @@ fn main() -> std::io::Result<()> {
 
     // TODO: Implement creation of notes from PDF slides.
 
+    // TODO: if possible, redefine library as a folder, and have some kind of way to distinguish
+    // 'libraries' from their subfolders, maybe by redefining library/folder as traits?
+
     if let Commands::New { name: title } = &args.command {
         let tag = "mytag".to_string();
-        let note = Note::new("Test Note", vec![tag.clone()], "me", "2025-03-17");
-        let folder = Folder::new("Test Folder", vec![tag.clone()], vec![], vec![note]);
-        let mut library = Library::new(&title, vec![tag], vec![folder]);
-
+        let folder = Folder::new("Test Folder", vec![tag.clone()], vec![], vec![]);
+        let mut library = Library::new(&title, vec![tag.clone()], vec![folder]);
         library.initialise()?;
+
+        let nested_folder = Folder::new("Test Nested Folder", vec![tag.clone()], vec![], vec![]);
+        library.folders[0].add_folder(nested_folder)?;
+
+        let note = Note::new("Test Note", vec![tag.clone()], "me", "2025-03-17");
+        library.folders[0].folders[0].add_note(note)?;
+
     }
 
     if let Commands::Open { name: title } = &args.command {
@@ -71,10 +79,10 @@ impl Library {
     }
 
     fn initialise(&mut self) -> std::io::Result<()> {
-        let directory_name = &self.metadata.title.to_ascii_lowercase().replace(" ", "-");
+        let directory_name = PathBuf::from(&self.metadata.title.to_ascii_lowercase().replace(" ", "-"));
         std::fs::create_dir(&directory_name)?;
 
-        let metadata_file_name = format!("{}/{}", directory_name, "library.toml");
+        let metadata_file_name = directory_name.join("library.toml");
         let mut metadata_file = std::fs::File::create(metadata_file_name)?;
         metadata_file.write_all(toml::to_string(&self.metadata).expect("could not convert to TOML").as_bytes())?;
 
@@ -131,19 +139,19 @@ impl Folder {
         }
     }
 
-    fn initialise(&mut self, parent_folder: &str) -> std::io::Result<()> {
+    fn initialise(&mut self, parent_folder: &impl AsRef<Path>) -> std::io::Result<()> {
         let subdirectory_name = &self.metadata.title.to_ascii_lowercase().replace(" ", "-");
-        let directory_name = format!("{}/{}", parent_folder, subdirectory_name);
-        std::fs::create_dir(&directory_name)?;
+        let directory_path =  parent_folder.as_ref().join(subdirectory_name);
+        std::fs::create_dir(&directory_path)?;
 
-        let metadata_file_name = format!("{}/{}", directory_name, "folder.toml");
-        let mut metadata_file = std::fs::File::create(metadata_file_name)?;
+        let metadata_path = directory_path.join("folder.toml");
+        let mut metadata_file = std::fs::File::create(metadata_path)?;
         metadata_file.write_all(toml::to_string(&self.metadata).expect("could not convert to TOML").as_bytes())?;
 
         for note in &mut self.notes {
-            note.initialise(&directory_name)?;
+            note.initialise(&directory_path)?;
         }
-        self.path = Some(PathBuf::from(&directory_name));
+        self.path = Some(PathBuf::from(&directory_path));
         Ok(())
     }
 
@@ -174,6 +182,22 @@ impl Folder {
             }
         )
     }
+
+    fn add_note(&mut self, mut note: Note) -> std::io::Result<()> {
+        if let Some(parent_path) = &self.path {
+            note.initialise(parent_path)?;
+        }
+        self.notes.push(note);
+        Ok(())
+    }
+
+    fn add_folder(&mut self, mut folder: Folder) -> std::io::Result<()> {
+        if let Some(parent_path) = &self.path {
+            folder.initialise(parent_path)?;
+        }
+        self.folders.push(folder);
+        Ok(())
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -200,13 +224,13 @@ impl Note {
         }
     }
 
-    fn initialise(&mut self, parent_folder: &str) -> std::io::Result<()> {
+    fn initialise(&mut self, parent_folder: impl AsRef<Path>) -> std::io::Result<()> {
         let subdirectory_name = &self.metadata.title.to_ascii_lowercase().replace(" ", "-");
-        let directory_name = format!("{}/{}", parent_folder, subdirectory_name);
-        std::fs::create_dir(&directory_name)?;
+        let directory_path = parent_folder.as_ref().join(subdirectory_name);
+        std::fs::create_dir(&directory_path)?;
 
-        let note_file_name = format!("{}/{}", directory_name, "note.md");
-        let metadata_file_name = format!("{}/{}", directory_name, "note.toml");
+        let note_file_name = directory_path.join("note.md");
+        let metadata_file_name = directory_path.join("note.toml");
         std::fs::File::create(note_file_name)?;
         let mut metadata_file = std::fs::File::create(metadata_file_name)?;
         metadata_file.write_all(toml::to_string(&self.metadata).expect("could not convert to TOML").as_bytes())?;
