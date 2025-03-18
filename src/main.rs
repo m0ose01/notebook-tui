@@ -1,6 +1,7 @@
 use std::io::Write;
+use std::path::Path;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 fn main() -> std::io::Result<()> {
 
@@ -18,19 +19,25 @@ fn main() -> std::io::Result<()> {
 
     // TODO: Implement creation of notes from PDF slides.
 
-    let tag = "mytag".to_string();
-    let note = Note::new("Test Note", vec![tag.clone()], "me", "2025-03-17");
-    let folder = Folder::new("Test Folder", vec![tag.clone()], vec![note]);
-    let mut library = Library::new("Test Lib", vec![tag], vec![folder]);
+    {
+        let tag = "mytag".to_string();
+        let note = Note::new("Test Note", vec![tag.clone()], "me", "2025-03-17");
+        let folder = Folder::new("Test Folder", vec![tag.clone()], vec![note]);
+        let mut library = Library::new("Test Lib", vec![tag], vec![folder]);
 
-    library.initialise()?;
+        library.initialise()?;
+    }
+
+    let library = Library::open("./test-lib")?;
+    println!("{:?}", library);
 
     Ok(())
 }
 
+#[derive(Debug)]
 struct Library {
-    folders: Vec<Folder>,
     metadata: LibraryMetadata,
+    folders: Vec<Folder>,
     initialised: bool,
 }
 
@@ -58,17 +65,38 @@ impl Library {
         self.initialised = true;
         Ok(())
     }
+
+    fn open(path: impl AsRef<Path>) -> std::io::Result<Self> {
+
+        let metadata_file_name = path.as_ref().join("library.toml");
+        let metadata_file = std::fs::read_to_string(metadata_file_name).unwrap();
+        let metadata = toml::from_str(&metadata_file).unwrap();
+
+        let folders: Vec<Folder> = std::fs::read_dir(path.as_ref())?
+            .filter_map(
+                |n| Folder::open(n.expect("Failed to read directory").path()).ok()
+            )
+            .collect();
+        Ok(
+            Self {
+                folders,
+                metadata,
+                initialised: true,
+            }
+        )
+    }
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize, Debug)]
 struct LibraryMetadata {
     title: String,
     tags: Vec<String>,
 }
 
+#[derive(Debug)]
 struct Folder {
-    notes: Vec<Note>,
     metadata: FolderMetadata,
+    notes: Vec<Note>,
     initialised: bool,
 }
 
@@ -97,14 +125,35 @@ impl Folder {
         self.initialised = true;
         Ok(())
     }
+
+    fn open(path: impl AsRef<Path>) -> std::io::Result<Self> {
+
+        let metadata_file_name = path.as_ref().join("folder.toml");
+        let metadata_file = std::fs::read_to_string(metadata_file_name)?;
+        let metadata = toml::from_str(&metadata_file).expect("Could not read folder metadata from TOML");
+
+        let notes: Vec<Note> = std::fs::read_dir(path.as_ref())?
+            .filter_map(
+                |n| Note::open(n.expect("Failed to read directory").path()).ok()
+            )
+            .collect();
+        Ok(
+            Self {
+                notes,
+                metadata,
+                initialised: true,
+            }
+        )
+    }
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize, Debug)]
 struct FolderMetadata {
     title: String,
     tags: Vec<String>,
 }
 
+#[derive(Debug)]
 struct Note {
     metadata: NoteMetadata,
     initialised: bool,
@@ -135,9 +184,21 @@ impl Note {
         self.initialised = true;
         Ok(())
     }
+
+    fn open<P: AsRef<Path>>(path: P) -> std::io::Result<Self> {
+        let metadata_file_name = path.as_ref().join("note.toml");
+        let metadata_file = std::fs::read_to_string(metadata_file_name)?;
+        let metadata = toml::from_str(&metadata_file).expect("could not convert from TOML");
+        Ok(
+            Note {
+                metadata,
+                initialised: true,
+            }
+        )
+    }
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize, Debug)]
 struct NoteMetadata {
     title: String,
     tags: Vec<String>,
