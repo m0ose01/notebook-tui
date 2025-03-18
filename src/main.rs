@@ -1,5 +1,5 @@
 use std::io::Write;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use clap::{Parser, Subcommand};
 use serde::{Deserialize, Serialize};
@@ -57,7 +57,7 @@ fn main() -> std::io::Result<()> {
 struct Library {
     metadata: LibraryMetadata,
     folders: Vec<Folder>,
-    initialised: bool,
+    path: Option<PathBuf>,
 }
 
 impl Library {
@@ -66,7 +66,7 @@ impl Library {
         Self {
             folders,
             metadata: LibraryMetadata{title, tags},
-            initialised: false,
+            path: None,
         }
     }
 
@@ -81,7 +81,7 @@ impl Library {
         for folder in &mut self.folders {
             folder.initialise(&directory_name)?;
         }
-        self.initialised = true;
+        self.path = Some(PathBuf::from(&directory_name));
         Ok(())
     }
 
@@ -100,7 +100,7 @@ impl Library {
             Self {
                 folders,
                 metadata,
-                initialised: true,
+                path: Some(PathBuf::from(path.as_ref())),
             }
         )
     }
@@ -117,7 +117,7 @@ struct Folder {
     metadata: FolderMetadata,
     folders: Vec<Folder>,
     notes: Vec<Note>,
-    initialised: bool,
+    path: Option<PathBuf>,
 }
 
 impl Folder {
@@ -127,7 +127,7 @@ impl Folder {
             folders,
             notes,
             metadata: FolderMetadata{title, tags},
-            initialised: false,
+            path: None,
         }
     }
 
@@ -143,7 +143,7 @@ impl Folder {
         for note in &mut self.notes {
             note.initialise(&directory_name)?;
         }
-        self.initialised = true;
+        self.path = Some(PathBuf::from(&directory_name));
         Ok(())
     }
 
@@ -170,7 +170,7 @@ impl Folder {
                 folders,
                 notes,
                 metadata,
-                initialised: true,
+                path: Some(PathBuf::from(path.as_ref())),
             }
         )
     }
@@ -185,7 +185,7 @@ struct FolderMetadata {
 #[derive(Debug)]
 struct Note {
     metadata: NoteMetadata,
-    initialised: bool,
+    path: Option<PathBuf>,
 }
 
 impl Note {
@@ -196,7 +196,7 @@ impl Note {
 
         Self {
             metadata: NoteMetadata { title, tags, author, date },
-            initialised: false,
+            path: None,
         }
     }
 
@@ -210,7 +210,7 @@ impl Note {
         std::fs::File::create(note_file_name)?;
         let mut metadata_file = std::fs::File::create(metadata_file_name)?;
         metadata_file.write_all(toml::to_string(&self.metadata).expect("could not convert to TOML").as_bytes())?;
-        self.initialised = true;
+        self.path = Some(PathBuf::from(&subdirectory_name));
         Ok(())
     }
 
@@ -221,7 +221,7 @@ impl Note {
         Ok(
             Note {
                 metadata,
-                initialised: true,
+                path: Some(PathBuf::from(path.as_ref())),
             }
         )
     }
