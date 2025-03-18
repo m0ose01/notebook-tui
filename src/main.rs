@@ -47,7 +47,7 @@ fn main() -> std::io::Result<()> {
 
     if let Commands::Open { name: title } = &args.command {
         let library = Library::open(&title)?;
-        println!("{:?}", library);
+        println!("{:#?}", library);
     }
 
     Ok(())
