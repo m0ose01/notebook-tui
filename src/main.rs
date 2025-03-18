@@ -39,7 +39,7 @@ fn main() -> std::io::Result<()> {
     if let Commands::New { name: title } = &args.command {
         let tag = "mytag".to_string();
         let note = Note::new("Test Note", vec![tag.clone()], "me", "2025-03-17");
-        let folder = Folder::new("Test Folder", vec![tag.clone()], vec![note]);
+        let folder = Folder::new("Test Folder", vec![tag.clone()], vec![], vec![note]);
         let mut library = Library::new(&title, vec![tag], vec![folder]);
 
         library.initialise()?;
@@ -115,14 +115,16 @@ struct LibraryMetadata {
 #[derive(Debug)]
 struct Folder {
     metadata: FolderMetadata,
+    folders: Vec<Folder>,
     notes: Vec<Note>,
     initialised: bool,
 }
 
 impl Folder {
-    fn new(title: &str, tags: Vec<String>, notes: Vec<Note>) -> Self {
+    fn new(title: &str, tags: Vec<String>, folders: Vec<Folder>, notes: Vec<Note>) -> Self {
         let title = title.to_string();
         Self {
+            folders,
             notes,
             metadata: FolderMetadata{title, tags},
             initialised: false,
@@ -151,6 +153,13 @@ impl Folder {
         let metadata_file = std::fs::read_to_string(metadata_file_name)?;
         let metadata = toml::from_str(&metadata_file).expect("Could not read folder metadata from TOML");
 
+        // This is probably not the most efficient way of doing things, but it's simple
+        let folders: Vec<Folder> = std::fs::read_dir(path.as_ref())?
+            .filter_map(
+                |n| Folder::open(n.expect("Failed to read directory").path()).ok()
+            )
+            .collect();
+
         let notes: Vec<Note> = std::fs::read_dir(path.as_ref())?
             .filter_map(
                 |n| Note::open(n.expect("Failed to read directory").path()).ok()
@@ -158,6 +167,7 @@ impl Folder {
             .collect();
         Ok(
             Self {
+                folders,
                 notes,
                 metadata,
                 initialised: true,
