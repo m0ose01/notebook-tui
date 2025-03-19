@@ -2,7 +2,7 @@ mod note;
 
 use clap::{Parser, Subcommand};
 
-use crate::note::{Library, Folder, Note};
+use crate::note::{Folder, Note};
 
 #[derive(Parser)]
 struct Args {
@@ -41,11 +41,11 @@ fn main() -> std::io::Result<()> {
 
     if let Commands::New { name: title } = &args.command {
         let tag = "mytag".to_string();
-        let folder = Folder::new("Test Folder", vec![tag.clone()], vec![], vec![]);
-        let mut library = Library::new(&title, vec![tag.clone()], vec![folder]);
-        library.initialise()?;
+        let folder = Folder::new("Test Folder", vec![tag.clone()], vec![], vec![], false);
+        let mut library = Folder::new(&title, vec![tag.clone()], vec![folder], vec![], true);
+        library.initialise(&std::path::PathBuf::from("."))?;
 
-        let nested_folder = Folder::new("Test Nested Folder", vec![tag.clone()], vec![], vec![]);
+        let nested_folder = Folder::new("Test Nested Folder", vec![tag.clone()], vec![], vec![], false);
         library.folders[0].add_folder(nested_folder)?;
 
         let note = Note::new("Test Note", vec![tag.clone()], "me", "2025-03-17");
@@ -54,7 +54,7 @@ fn main() -> std::io::Result<()> {
     }
 
     if let Commands::Open { name: title } = &args.command {
-        let library = Library::open(&title)?;
+        let library = Folder::open(&title)?;
         println!("{:#?}", library);
     }
 
