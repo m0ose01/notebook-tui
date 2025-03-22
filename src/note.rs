@@ -54,7 +54,7 @@ impl Folder {
         let note_parent_path = &metadata_path.as_ref().parent().expect("No parent folder for note metadata.");
         let notes: Vec<Note> = std::fs::read_dir(note_parent_path)?
             .filter_map(
-                |n| Note::open(n.expect("Failed to read directory").path().join("folder.toml")).ok()
+                |n| Note::open(n.expect("Failed to read directory").path()).ok()
             )
             .collect();
         Ok(
