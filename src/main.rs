@@ -41,7 +41,7 @@ fn main() -> std::io::Result<()> {
     // 'libraries' from their subfolders, maybe by redefining library/folder as traits?
 
     if let Commands::New { name: title } = &args.command {
-        let mut library: Folder = LibraryBuilder::new(title.to_string())
+        let mut library: Folder = LibraryBuilder::new(&title)
             .with_tags(vec!["College".to_owned()])
             .build()?;
 

@@ -101,9 +101,9 @@ pub struct LibraryBuilder {
 }
 
 impl LibraryBuilder {
-    pub fn new(title: String) -> Self {
+    pub fn new(title: &str) -> Self {
         Self {
-            metadata: FolderMetadata {title, tags: vec![]},
+            metadata: FolderMetadata {title: title.to_owned(), tags: vec![]},
             folders: vec![],
             notes: vec![],
             library: true,
