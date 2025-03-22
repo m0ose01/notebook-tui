@@ -32,31 +32,29 @@ impl Folder {
         Ok(())
     }
 
-    pub fn open(path: impl AsRef<Path>) -> std::io::Result<Self> {
-
+    pub fn open_library(path: impl AsRef<Path>) -> std::io::Result<Self> {
         let library_metadata_path = path.as_ref().join("library.toml");
-        println!("{:?}", library_metadata_path);
-        let folder_metadata_path = path.as_ref().join("folder.toml");
-        println!("{:?}", folder_metadata_path);
+        Folder::open(library_metadata_path)
+    }
 
-        let library = library_metadata_path.is_file();
+    fn open(metadata_path: impl AsRef<Path>) -> std::io::Result<Self> {
 
-        let metadata_file = match std::fs::read_to_string(&library_metadata_path) {
-            Ok(f) => f,
-            Err(_) => std::fs::read_to_string(folder_metadata_path)?,
-        };
+        let metadata_file = std::fs::read_to_string(&metadata_path)?;
+        let library = metadata_path.as_ref().file_name().expect("Could not get file name").to_str() == Some("library.toml");
         let metadata = toml::from_str(&metadata_file).expect("Could not read folder metadata from TOML");
 
         // This is probably not the most efficient way of doing things, but it's simple
-        let folders: Vec<Folder> = std::fs::read_dir(path.as_ref())?
+        let folder_parent_path = &metadata_path.as_ref().parent().expect("No parent folder for folder metadata.");
+        let folders: Vec<Folder> = std::fs::read_dir(folder_parent_path)?
             .filter_map(
-                |n| Folder::open(n.expect("Failed to read directory").path()).ok()
+                |n| Folder::open(n.expect("Failed to read directory").path().join("folder.toml")).ok()
             )
             .collect();
 
-        let notes: Vec<Note> = std::fs::read_dir(path.as_ref())?
+        let note_parent_path = &metadata_path.as_ref().parent().expect("No parent folder for note metadata.");
+        let notes: Vec<Note> = std::fs::read_dir(note_parent_path)?
             .filter_map(
-                |n| Note::open(n.expect("Failed to read directory").path()).ok()
+                |n| Note::open(n.expect("Failed to read directory").path().join("folder.toml")).ok()
             )
             .collect();
         Ok(
@@ -65,7 +63,7 @@ impl Folder {
                 notes,
                 metadata,
                 library,
-                path: PathBuf::from(path.as_ref()),
+                path: PathBuf::from(folder_parent_path),
             }
         )
     }
@@ -94,7 +92,7 @@ impl Folder {
     }
 }
 
-pub struct FolderBuilder {
+pub struct LibraryBuilder {
     metadata: FolderMetadata,
     folders: Vec<Folder>, // TODO: add a nicer way of getting notes
     notes: Vec<Note>, // see above
@@ -102,13 +100,13 @@ pub struct FolderBuilder {
     path: Option<PathBuf>,
 }
 
-impl FolderBuilder {
-    pub fn new(title: String, library: bool) -> Self {
+impl LibraryBuilder {
+    pub fn new(title: String) -> Self {
         Self {
             metadata: FolderMetadata {title, tags: vec![]},
             folders: vec![],
             notes: vec![],
-            library,
+            library: true,
             path: None,
         }
     }

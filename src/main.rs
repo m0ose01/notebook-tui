@@ -3,7 +3,7 @@ mod utils;
 
 use clap::{Parser, Subcommand};
 
-use crate::note::{Folder, FolderBuilder, Note};
+use crate::note::{Folder, LibraryBuilder};
 
 #[derive(Parser)]
 struct Args {
@@ -41,7 +41,7 @@ fn main() -> std::io::Result<()> {
     // 'libraries' from their subfolders, maybe by redefining library/folder as traits?
 
     if let Commands::New { name: title } = &args.command {
-        let mut library: Folder = FolderBuilder::new(title.to_string(), true)
+        let mut library: Folder = LibraryBuilder::new(title.to_string())
             .with_tags(vec!["College".to_owned()])
             .build()?;
 
@@ -50,7 +50,7 @@ fn main() -> std::io::Result<()> {
     }
 
     if let Commands::Open { name: title } = &args.command {
-        let library = Folder::open(&title)?;
+        let library = Folder::open_library(&title)?;
         println!("{:#?}", library);
     }
 
