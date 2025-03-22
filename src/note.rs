@@ -181,6 +181,10 @@ impl Note {
             .status()
             .expect("Unable to spawn process");
     }
+
+    pub fn title(&self) -> &str {
+        &self.metadata.title
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]

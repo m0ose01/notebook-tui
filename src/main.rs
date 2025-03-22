@@ -1,9 +1,12 @@
 mod note;
+mod tui;
 mod utils;
 
 use clap::{Parser, Subcommand};
 
-use crate::note::{Folder, LibraryBuilder};
+use crate::{
+    note::{Folder, LibraryBuilder},
+};
 
 #[derive(Parser)]
 struct Args {
@@ -50,8 +53,10 @@ fn main() -> std::io::Result<()> {
     }
 
     if let Commands::Open { name: title } = &args.command {
-        let library = Folder::open_library(&title)?;
-        library.notes[0].edit("nvim");
+        let mut library = Folder::open_library(&title)?;
+        //library.add_note("Top Level Note 2", vec!["Physiology".to_owned()], "John Doe", "2025/03/22")?;
+        let idx = tui::run(&library)?;
+        library.notes[idx].edit("nvim");
     }
 
     Ok(())
