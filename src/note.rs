@@ -1,5 +1,6 @@
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 use serde::{Deserialize, Serialize};
 
@@ -171,6 +172,14 @@ impl Note {
                 path: PathBuf::from(path.as_ref()),
             }
         )
+    }
+
+    pub fn edit(&self, editor: impl AsRef<Path>) {
+        let note_path = &self.path.join("note.md");
+        Command::new(editor.as_ref().as_os_str())
+            .arg(&note_path)
+            .status()
+            .expect("Unable to spawn process");
     }
 }
 

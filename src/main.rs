@@ -51,7 +51,7 @@ fn main() -> std::io::Result<()> {
 
     if let Commands::Open { name: title } = &args.command {
         let library = Folder::open_library(&title)?;
-        println!("{:#?}", library);
+        library.notes[0].edit("nvim");
     }
 
     Ok(())
