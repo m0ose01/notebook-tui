@@ -3,46 +3,31 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
+use crate::utils::CaseExt;
+
 #[derive(Debug)]
 pub struct Folder {
     metadata: FolderMetadata,
     pub folders: Vec<Folder>, // TODO: add a nicer way of getting notes
     pub notes: Vec<Note>, // see above
     library: bool,
-    path: Option<PathBuf>,
+    path: PathBuf,
 }
 
 impl Folder {
-    pub fn new(title: &str, tags: Vec<String>, folders: Vec<Folder>, notes: Vec<Note>, library: bool) -> Self {
-        // TODO: create some kind of 'builder' instead of having multiple ways of adding
-        // folders/notes.
-        let title = title.to_string();
-        Self {
-            folders,
-            notes,
-            metadata: FolderMetadata{title, tags},
-            library,
-            path: None,
-        }
-    }
 
-    pub fn initialise(&mut self, parent_folder: &impl AsRef<Path>) -> std::io::Result<()> {
-        let subdirectory_name = &self.metadata.title.to_ascii_lowercase().replace(" ", "-");
-        let directory_path =  parent_folder.as_ref().join(subdirectory_name);
-        if let None = self.path {
-            std::fs::create_dir(&directory_path)?;
+    fn initialise(&mut self) -> std::io::Result<()> {
+        std::fs::create_dir(&self.path)?;
 
-            let metadata_path = directory_path.join(if self.library {"library.toml"} else {"folder.toml"});
-            let mut metadata_file = std::fs::File::create(metadata_path)?;
-            metadata_file.write_all(toml::to_string(&self.metadata).expect("could not convert to TOML").as_bytes())?;
+        let metadata_path = &self.path.join(if self.library {"library.toml"} else {"folder.toml"});
+        let mut metadata_file = std::fs::File::create(metadata_path)?;
+        metadata_file.write_all(toml::to_string(&self.metadata).expect("could not convert to TOML").as_bytes())?;
 
-            self.path = Some(PathBuf::from(&directory_path));
-        }
         for folder in &mut self.folders {
-            folder.initialise(&directory_path)?;
+            folder.initialise()?;
         }
         for note in &mut self.notes {
-            note.initialise(&directory_path)?;
+            note.initialise()?;
         }
         Ok(())
     }
@@ -80,25 +65,77 @@ impl Folder {
                 notes,
                 metadata,
                 library,
-                path: Some(PathBuf::from(path.as_ref())),
+                path: PathBuf::from(path.as_ref()),
             }
         )
     }
 
-    pub fn add_note(&mut self, mut note: Note) -> std::io::Result<()> {
-        if let Some(parent_path) = &self.path {
-            note.initialise(parent_path)?;
-        }
+    pub fn add_note(&mut self, title: &str, tags: Vec<String>, author: &str, date: &str) -> std::io::Result<()> {
+        let mut note = Note {
+            path: self.path.join(title.to_owned().to_kebab_case()),
+            metadata: NoteMetadata {title: title.to_owned(), tags, author: author.to_owned(), date: date.to_owned()},
+        };
+        note.initialise()?;
         self.notes.push(note);
         Ok(())
     }
 
-    pub fn add_folder(&mut self, mut folder: Folder) -> std::io::Result<()> {
-        if let Some(parent_path) = &self.path {
-            folder.initialise(parent_path)?;
-        }
-        self.folders.push(folder);
+    pub fn add_folder(&mut self, title: String) -> std::io::Result<()> {
+        let mut new_folder = Self {
+            folders: vec![],
+            notes: vec![],
+            metadata: FolderMetadata{title: title.clone(), tags: vec![]},
+            library: false,
+            path: self.path.join(title.to_kebab_case()),
+        };
+        new_folder.initialise()?;
+        self.folders.push(new_folder);
         Ok(())
+    }
+}
+
+pub struct FolderBuilder {
+    metadata: FolderMetadata,
+    folders: Vec<Folder>, // TODO: add a nicer way of getting notes
+    notes: Vec<Note>, // see above
+    library: bool,
+    path: Option<PathBuf>,
+}
+
+impl FolderBuilder {
+    pub fn new(title: String, library: bool) -> Self {
+        Self {
+            metadata: FolderMetadata {title, tags: vec![]},
+            folders: vec![],
+            notes: vec![],
+            library,
+            path: None,
+        }
+    }
+
+    pub fn with_tags(mut self, tags: Vec<String>) -> Self {
+        self.metadata.tags = tags;
+        self
+    }
+
+    pub fn with_path(mut self, path: impl AsRef<Path>) -> Self {
+        self.path = Some(path.as_ref().to_path_buf());
+        self
+    }
+
+    pub fn build(self) -> std::io::Result<Folder> {
+        let path = if self.path.is_some() { self.path.expect("Invalid state: path should be checked for none") } else {
+            PathBuf::from(&self.metadata.title.to_kebab_case())
+        };
+        let mut folder = Folder {
+            metadata: self.metadata,
+            folders: self.folders,
+            notes: self.notes,
+            library: self.library,
+            path,
+        };
+        folder.initialise()?;
+        Ok(folder)
     }
 }
 
@@ -111,34 +148,18 @@ struct FolderMetadata {
 #[derive(Debug)]
 pub struct Note {
     metadata: NoteMetadata,
-    path: Option<PathBuf>,
+    path: PathBuf,
 }
 
 impl Note {
-    pub fn new(title: &str, tags: Vec<String>, author: &str, date: &str) -> Self {
-        let title = title.to_string();
-        let author = author.to_string();
-        let date = date.to_string();
+    fn initialise(&mut self) -> std::io::Result<()> {
+        std::fs::create_dir(&self.path)?;
 
-        Self {
-            metadata: NoteMetadata { title, tags, author, date },
-            path: None,
-        }
-    }
-
-    fn initialise(&mut self, parent_folder: impl AsRef<Path>) -> std::io::Result<()> {
-        if let None = self.path {
-            let subdirectory_name = &self.metadata.title.to_ascii_lowercase().replace(" ", "-");
-            let directory_path = parent_folder.as_ref().join(subdirectory_name);
-            std::fs::create_dir(&directory_path)?;
-
-            let note_file_name = directory_path.join("note.md");
-            let metadata_file_name = directory_path.join("note.toml");
-            std::fs::File::create(note_file_name)?;
-            let mut metadata_file = std::fs::File::create(metadata_file_name)?;
-            metadata_file.write_all(toml::to_string(&self.metadata).expect("could not convert to TOML").as_bytes())?;
-            self.path = Some(PathBuf::from(&subdirectory_name));
-        }
+        let note_file_name = self.path.join("note.md");
+        let metadata_file_name = self.path.join("note.toml");
+        std::fs::File::create(note_file_name)?;
+        let mut metadata_file = std::fs::File::create(metadata_file_name)?;
+        metadata_file.write_all(toml::to_string(&self.metadata).expect("could not convert to TOML").as_bytes())?;
         Ok(())
     }
 
@@ -149,7 +170,7 @@ impl Note {
         Ok(
             Note {
                 metadata,
-                path: Some(PathBuf::from(path.as_ref())),
+                path: PathBuf::from(path.as_ref()),
             }
         )
     }

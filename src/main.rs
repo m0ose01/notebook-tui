@@ -1,8 +1,9 @@
 mod note;
+mod utils;
 
 use clap::{Parser, Subcommand};
 
-use crate::note::{Folder, Note};
+use crate::note::{Folder, FolderBuilder, Note};
 
 #[derive(Parser)]
 struct Args {
@@ -40,17 +41,12 @@ fn main() -> std::io::Result<()> {
     // 'libraries' from their subfolders, maybe by redefining library/folder as traits?
 
     if let Commands::New { name: title } = &args.command {
-        let tag = "mytag".to_string();
-        let folder = Folder::new("Test Folder", vec![tag.clone()], vec![], vec![], false);
-        let mut library = Folder::new(&title, vec![tag.clone()], vec![folder], vec![], true);
-        library.initialise(&std::path::PathBuf::from("."))?;
+        let mut library: Folder = FolderBuilder::new(title.to_string(), true)
+            .with_tags(vec!["College".to_owned()])
+            .build()?;
 
-        let nested_folder = Folder::new("Test Nested Folder", vec![tag.clone()], vec![], vec![], false);
-        library.folders[0].add_folder(nested_folder)?;
-
-        let note = Note::new("Test Note", vec![tag.clone()], "me", "2025-03-17");
-        library.folders[0].folders[0].add_note(note)?;
-
+        library.add_folder("Nested Folder".to_owned())?;
+        library.add_note("Top Level Note", vec!["Physiology".to_owned()], "John Smith", "2025/03/22")?;
     }
 
     if let Commands::Open { name: title } = &args.command {
