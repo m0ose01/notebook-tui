@@ -1,5 +1,6 @@
 use ratatui::{
     crossterm::event::{self, Event, KeyEvent, KeyCode},
+    DefaultTerminal,
     prelude::{Buffer, Frame, Rect},
     style::{Color, Stylize},
     layout::Alignment,
@@ -7,25 +8,38 @@ use ratatui::{
 };
 use crate::note::Folder;
 
-pub fn run(library: &Folder) -> std::io::Result<usize> {
+pub fn run(library: &Folder) -> std::io::Result<()> {
     let mut terminal = ratatui::init();
+    draw(&mut terminal, library)?;
+    ratatui::restore();
+    Ok(())
+}
+
+fn draw(terminal: &mut DefaultTerminal, folder: &Folder) -> std::io::Result<()> {
     let mut list_state = ListState::default().with_selected(Some(0));
     loop {
-        terminal.draw(|f| draw(f, library, &mut list_state))?;
+        terminal.draw(|frame| frame.render_stateful_widget(folder, frame.area(), &mut list_state))?;
         if let Event::Key(key_event) = event::read().unwrap() {
             match key_event {
                 KeyEvent {code: KeyCode::Up, ..} => { list_state.select_previous(); },
                 KeyEvent {code: KeyCode::Down, ..} => { list_state.select_next(); },
-                _ => {break},
+                KeyEvent {code: KeyCode::Char('k'), ..} => { list_state.select_previous(); },
+                KeyEvent {code: KeyCode::Char('j'), ..} => { list_state.select_next(); },
+                _ => {
+                    break;
+                },
             }
         }
     }
-    ratatui::restore();
-    Ok(list_state.selected().unwrap_or(0))
-}
+    let idx = list_state.selected().unwrap_or_else(|| panic!("No item selected"));
+    if let Some(note) = folder.notes.get(idx) {
+        note.edit("nvim");
+    }
 
-fn draw(frame: &mut Frame, folder: &Folder, mut selected: &mut ListState) {
-    frame.render_stateful_widget(folder, frame.area(), &mut selected);
+    if let Some(folder) = folder.folders.get(idx - folder.notes.len()) {
+        draw(terminal, folder)?;
+    }
+    Ok(())
 }
 
 impl StatefulWidget for &Folder {

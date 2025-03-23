@@ -50,17 +50,12 @@ fn main() -> std::io::Result<()> {
 
         library.add_folder("Nested Folder".to_owned())?;
         library.add_note("Top Level Note", vec!["Physiology".to_owned()], "John Smith", "2025/03/22")?;
+        library.folders[0].add_note("Nested Note", vec!["Biochemistry".to_owned()], "John Smith", "2025/03/23")?;
     }
 
     if let Commands::Open { name: title } = &args.command {
         let library = Folder::open_library(&title)?;
-        let idx = tui::run(&library)?;
-        if let Some(note) = library.notes.get(idx) {
-            note.edit("nvim");
-        }
-        if let Some(folder)= library.folders.get(library.notes.len() - idx) {
-            tui::run(&folder)?;
-        }
+        tui::run(&library)?;
     }
 
     Ok(())
