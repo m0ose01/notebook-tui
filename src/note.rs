@@ -91,6 +91,10 @@ impl Folder {
         self.folders.push(new_folder);
         Ok(())
     }
+
+    pub fn title(&self) -> &str {
+        &self.metadata.title
+    }
 }
 
 pub struct LibraryBuilder {

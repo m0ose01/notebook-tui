@@ -1,11 +1,11 @@
 use ratatui::{
     crossterm::event::{self, Event, KeyEvent, KeyCode},
     prelude::{Buffer, Frame, Rect},
-    style::Stylize,
+    style::{Color, Stylize},
     layout::Alignment,
     widgets::{StatefulWidget, Block, List, ListItem, ListState},
 };
-use crate::note::{Note, Folder};
+use crate::note::Folder;
 
 pub fn run(library: &Folder) -> std::io::Result<usize> {
     let mut terminal = ratatui::init();
@@ -21,7 +21,7 @@ pub fn run(library: &Folder) -> std::io::Result<usize> {
         }
     }
     ratatui::restore();
-    Ok(list_state.selected().unwrap())
+    Ok(list_state.selected().unwrap_or(0))
 }
 
 fn draw(frame: &mut Frame, folder: &Folder, mut selected: &mut ListState) {
@@ -30,23 +30,29 @@ fn draw(frame: &mut Frame, folder: &Folder, mut selected: &mut ListState) {
 
 impl StatefulWidget for &Folder {
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut ListState) {
+        let notes_items = self.notes.iter().map(
+            |note| ListItem::new(note.title().to_owned()).bg(Color::Gray)
+        );
+
+        let folder_items = self.folders.iter().map(
+            |folder| {
+                ListItem::new(folder.title().to_owned()).bg(Color::LightYellow)
+            }
+        );
+
+        let items = notes_items.chain(folder_items).enumerate().map(
+            |(idx, item)| if idx == state.selected().unwrap() {item.fg(Color::Red).rapid_blink()} else {item.fg(Color::DarkGray)}
+        );
+
         let block = Block::bordered()
             .title_top("Notes")
             .title_alignment(Alignment::Center)
             .red()
             .bold()
             .on_white();
-        let list = List::new(&self.notes).block(block);
+        let list = List::new(items).block(block);
         StatefulWidget::render(list, area, buf, state)
     }
 
     type State = ListState;
-}
-
-impl From<&Note> for ListItem<'_> {
-    fn from(note: &Note) -> Self {
-        let mut title = note.title().to_owned();
-        title.insert_str(0, "    \u{1F4D1} ");
-        Self::from(title).bold().red().on_gray()
-    }
 }

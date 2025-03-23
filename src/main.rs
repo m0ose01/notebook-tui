@@ -53,10 +53,14 @@ fn main() -> std::io::Result<()> {
     }
 
     if let Commands::Open { name: title } = &args.command {
-        let mut library = Folder::open_library(&title)?;
-        //library.add_note("Top Level Note 2", vec!["Physiology".to_owned()], "John Doe", "2025/03/22")?;
+        let library = Folder::open_library(&title)?;
         let idx = tui::run(&library)?;
-        library.notes[idx].edit("nvim");
+        if let Some(note) = library.notes.get(idx) {
+            note.edit("nvim");
+        }
+        if let Some(folder)= library.folders.get(library.notes.len() - idx) {
+            tui::run(&folder)?;
+        }
     }
 
     Ok(())
