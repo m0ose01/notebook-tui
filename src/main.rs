@@ -1,26 +1,19 @@
+mod cli;
 mod note;
 mod tui;
 mod utils;
 
-use std::error::Error;
+use std::{
+    error::Error,
+    path::PathBuf,
+};
 
-use clap::{Parser, Subcommand};
+use clap::Parser;
 
-use crate::note::{Folder, LibraryBuilder};
-
-#[derive(Parser)]
-struct Args {
-    #[command(subcommand)]
-    command: Commands,
-}
-
-#[derive(Subcommand)]
-enum Commands {
-    /// Create a new library.
-    New { name: String },
-    /// Open an existing library.
-    Open { name: String },
-}
+use crate::{
+    note::{Folder, LibraryBuilder},
+    cli::{Args, Commands},
+};
 
 fn main() -> Result<(), Box<dyn Error>> {
 
@@ -43,10 +36,14 @@ fn main() -> Result<(), Box<dyn Error>> {
     // TODO: if possible, redefine library as a folder, and have some kind of way to distinguish
     // 'libraries' from their subfolders, maybe by redefining library/folder as traits?
 
-    if let Commands::New { name: title } = &args.command {
-        let mut library: Folder = LibraryBuilder::new(&title)
-            .with_tags(vec!["College".to_owned()])
-            .build()?;
+    if let Commands::New(subcommand_args) = &args.command {
+        let mut library = LibraryBuilder::new(&subcommand_args.name)
+            .with_tags(vec!["College".to_owned()]);
+        if let Some(path) = &subcommand_args.path {
+            library = library.with_path(path);
+        }
+
+        let mut library = library.build()?;
 
         let n_items = 5;
         for item_idx in 0..n_items {
@@ -56,8 +53,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
     }
 
-    if let Commands::Open { name: title } = &args.command {
-        let library = Folder::open_library(&title)?;
+    if let Commands::Open(subcommand_args) = &args.command {
+        let library = Folder::open_library(&subcommand_args.name)?;
         tui::run(&library)?;
     }
 
