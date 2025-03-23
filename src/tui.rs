@@ -1,3 +1,5 @@
+use std::error::Error;
+
 use ratatui::{
     crossterm::event::{self, Event, KeyEvent, KeyCode},
     DefaultTerminal,
@@ -9,25 +11,25 @@ use ratatui::{
 };
 use crate::note::Folder;
 
-pub fn run(library: &Folder) -> std::io::Result<()> {
+pub fn run(library: &Folder) -> Result<(), Box<dyn Error>> {
     let mut terminal = ratatui::init();
     draw(&mut terminal, library)?;
     ratatui::restore();
     Ok(())
 }
 
-fn draw(terminal: &mut DefaultTerminal, folder: &Folder) -> std::io::Result<()> {
+fn draw(terminal: &mut DefaultTerminal, folder: &Folder) -> Result<(), Box<dyn Error>> {
     let mut list_state = ListState::default().with_selected(Some(0));
     loop {
         terminal.draw(|frame| frame.render_stateful_widget(folder, frame.area(), &mut list_state))?;
-        if let Event::Key(key_event) = event::read().unwrap() {
+        if let Event::Key(key_event) = event::read()? {
             match key_event {
                 KeyEvent {code: KeyCode::Up, ..} => { list_state.select_previous(); },
                 KeyEvent {code: KeyCode::Down, ..} => { list_state.select_next(); },
                 KeyEvent {code: KeyCode::Char('k'), ..} => { list_state.select_previous(); },
                 KeyEvent {code: KeyCode::Char('j'), ..} => { list_state.select_next(); },
                 KeyEvent {code: KeyCode::Enter, ..} => {
-                    let idx = list_state.selected().unwrap_or_else(|| panic!("No item selected"));
+                    let idx = list_state.selected().ok_or("No item selected")?;
                     if let Some(note) = folder.notes.get(idx) {
                         ratatui::restore();
                         note.edit("nvim");

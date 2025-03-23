@@ -2,11 +2,11 @@ mod note;
 mod tui;
 mod utils;
 
+use std::error::Error;
+
 use clap::{Parser, Subcommand};
 
-use crate::{
-    note::{Folder, LibraryBuilder},
-};
+use crate::note::{Folder, LibraryBuilder};
 
 #[derive(Parser)]
 struct Args {
@@ -22,7 +22,7 @@ enum Commands {
     Open { name: String },
 }
 
-fn main() -> std::io::Result<()> {
+fn main() -> Result<(), Box<dyn Error>> {
 
     let args = Args::parse();
 
