@@ -48,7 +48,7 @@ fn main() -> std::io::Result<()> {
             .with_tags(vec!["College".to_owned()])
             .build()?;
 
-        library.add_folder("Nested Folder".to_owned())?;
+        library.add_folder("Nested Folder")?;
         library.add_note("Top Level Note", vec!["Physiology".to_owned()], "John Smith", "2025/03/22")?;
         library.folders[0].add_note("Nested Note", vec!["Biochemistry".to_owned()], "John Smith", "2025/03/23")?;
     }

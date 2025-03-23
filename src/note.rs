@@ -79,7 +79,8 @@ impl Folder {
         Ok(())
     }
 
-    pub fn add_folder(&mut self, title: String) -> std::io::Result<()> {
+    pub fn add_folder(&mut self, title: &str) -> std::io::Result<()> {
+        let title = title.to_owned();
         let mut new_folder = Self {
             folders: vec![],
             notes: vec![],
