@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::utils::CaseExt;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Folder {
     metadata: FolderMetadata,
     pub folders: Vec<Folder>, // TODO: add a nicer way of getting notes
@@ -46,18 +46,20 @@ impl Folder {
 
         // This is probably not the most efficient way of doing things, but it's simple
         let folder_parent_path = &metadata_path.as_ref().parent().expect("No parent folder for folder metadata.");
-        let folders: Vec<Folder> = std::fs::read_dir(folder_parent_path)?
+        let mut folders: Vec<Folder> = std::fs::read_dir(folder_parent_path)?
             .filter_map(
                 |n| Folder::open(n.expect("Failed to read directory").path().join("folder.toml")).ok()
             )
             .collect();
+        folders.sort_by_key(|folder| folder.metadata.title.clone());
 
         let note_parent_path = &metadata_path.as_ref().parent().expect("No parent folder for note metadata.");
-        let notes: Vec<Note> = std::fs::read_dir(note_parent_path)?
+        let mut notes: Vec<Note> = std::fs::read_dir(note_parent_path)?
             .filter_map(
                 |n| Note::open(n.expect("Failed to read directory").path()).ok()
             )
             .collect();
+        notes.sort_by_key(|note| note.metadata.title.clone());
         Ok(
             Self {
                 folders,
@@ -143,13 +145,13 @@ impl LibraryBuilder {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord)]
 struct FolderMetadata {
     title: String,
     tags: Vec<String>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Note {
     metadata: NoteMetadata,
     path: PathBuf,
@@ -192,7 +194,7 @@ impl Note {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord)]
 struct NoteMetadata {
     title: String,
     tags: Vec<String>,
