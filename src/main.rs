@@ -3,10 +3,7 @@ mod note;
 mod tui;
 mod utils;
 
-use std::{
-    error::Error,
-    path::PathBuf,
-};
+use std::error::Error;
 
 use clap::Parser;
 

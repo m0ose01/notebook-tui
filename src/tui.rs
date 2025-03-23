@@ -79,6 +79,8 @@ fn handle_input() -> Option<MenuAction> {
         KeyEvent {code: KeyCode::Backspace, ..} => Some(MenuAction::Back),
         KeyEvent {code: KeyCode::Char('h'), ..} => Some(MenuAction::Back),
         KeyEvent {code: KeyCode::Char('q'), ..} => Some(MenuAction::Quit),
+        KeyEvent {code: KeyCode::Char('n'), ..} => Some(MenuAction::AddNote),
+        KeyEvent {code: KeyCode::Char('N'), ..} => Some(MenuAction::AddFolder),
         _ => None,
     }
 }

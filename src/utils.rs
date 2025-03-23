@@ -1,5 +1,6 @@
 pub trait CaseExt {
     fn to_kebab_case(&self) -> String;
+    #[allow(dead_code)]
     fn to_snake_case(&self) -> String;
 }
 
