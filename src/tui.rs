@@ -1,7 +1,7 @@
 use ratatui::{
     crossterm::event::{self, Event, KeyEvent, KeyCode},
     DefaultTerminal,
-    prelude::{Buffer, Frame, Rect},
+    prelude::{Buffer, Rect},
     style::{Color, Stylize},
     layout::Alignment,
     widgets::{StatefulWidget, Block, List, ListItem, ListState},
@@ -25,19 +25,19 @@ fn draw(terminal: &mut DefaultTerminal, folder: &Folder) -> std::io::Result<()> 
                 KeyEvent {code: KeyCode::Down, ..} => { list_state.select_next(); },
                 KeyEvent {code: KeyCode::Char('k'), ..} => { list_state.select_previous(); },
                 KeyEvent {code: KeyCode::Char('j'), ..} => { list_state.select_next(); },
-                _ => {
-                    break;
+                KeyEvent {code: KeyCode::Enter, ..} => {
+                    let idx = list_state.selected().unwrap_or_else(|| panic!("No item selected"));
+                    if let Some(note) = folder.notes.get(idx) {
+                        ratatui::restore();
+                        note.edit("nvim");
+                        *terminal = ratatui::init();
+                    } else if let Some(folder) = folder.folders.get(idx - folder.notes.len()) {
+                        draw(terminal, folder)?;
+                    }
                 },
+                _ => { break },
             }
         }
-    }
-    let idx = list_state.selected().unwrap_or_else(|| panic!("No item selected"));
-    if let Some(note) = folder.notes.get(idx) {
-        note.edit("nvim");
-    }
-
-    if let Some(folder) = folder.folders.get(idx - folder.notes.len()) {
-        draw(terminal, folder)?;
     }
     Ok(())
 }
