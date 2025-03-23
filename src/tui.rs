@@ -1,10 +1,11 @@
 use ratatui::{
     crossterm::event::{self, Event, KeyEvent, KeyCode},
     DefaultTerminal,
+    layout::{Layout, Constraint},
     prelude::{Buffer, Rect},
     style::{Color, Stylize},
     layout::Alignment,
-    widgets::{StatefulWidget, Block, List, ListItem, ListState},
+    widgets::{Widget, StatefulWidget, Block, List, ListItem, ListState, Paragraph},
 };
 use crate::note::Folder;
 
@@ -58,14 +59,37 @@ impl StatefulWidget for &Folder {
             |(idx, item)| if idx == state.selected().unwrap() {item.fg(Color::Red).rapid_blink()} else {item.fg(Color::DarkGray)}
         );
 
-        let block = Block::bordered()
-            .title_top("Notes")
-            .title_alignment(Alignment::Center)
-            .red()
-            .bold()
-            .on_white();
-        let list = List::new(items).block(block);
-        StatefulWidget::render(list, area, buf, state)
+        let layout = Layout::default()
+            .constraints(vec![
+                Constraint::Percentage(10),
+                Constraint::Percentage(90),
+            ])
+            .split(area);
+
+        let instructions = Paragraph::new(
+            "Use the up/down or j/k keys to navigate.
+Select an item using the enter key."
+        )
+            .alignment(Alignment::Center)
+            .dark_gray()
+            .block(
+                Block::bordered()
+                    .title_top("Instructions")
+                    .title_alignment(Alignment::Center)
+                    .red()
+                    .bold()
+                    .on_white()
+            );
+        let list = List::new(items).block(
+            Block::bordered()
+                .title_top(self.title())
+                .title_alignment(Alignment::Center)
+                .red()
+                .bold()
+                .on_white()
+        );
+        Widget::render(instructions, layout[0], buf);
+        StatefulWidget::render(list, layout[1], buf, state)
     }
 
     type State = ListState;
