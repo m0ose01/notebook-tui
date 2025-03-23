@@ -48,9 +48,12 @@ fn main() -> Result<(), Box<dyn Error>> {
             .with_tags(vec!["College".to_owned()])
             .build()?;
 
-        library.add_folder("Nested Folder")?;
-        library.add_note("Top Level Note", vec!["Physiology".to_owned()], "John Smith", "2025/03/22")?;
-        library.folders[0].add_note("Nested Note", vec!["Biochemistry".to_owned()], "John Smith", "2025/03/23")?;
+        let n_items = 5;
+        for item_idx in 0..n_items {
+            library.add_folder(&format!("Nested Folder {item_idx}"))?;
+            library.add_note(&format!("Top Level Note {item_idx}"), vec!["Physiology".to_owned()], "John Smith", "2025/03/22")?;
+            library.folders[item_idx].add_note(&format!("Nested Note {item_idx}"), vec!["Biochemistry".to_owned()], "John Smith", "2025/03/23")?;
+        }
     }
 
     if let Commands::Open { name: title } = &args.command {
