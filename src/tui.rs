@@ -58,7 +58,7 @@ impl StatefulWidget for &Folder {
         );
 
         let items = notes_items.chain(folder_items).enumerate().map(
-            |(idx, item)| if idx == state.selected().unwrap() {item.fg(Color::Red).rapid_blink()} else {item.fg(Color::DarkGray)}
+            |(idx, item)| if idx == state.selected().unwrap() {item.fg(Color::Red)} else {item.fg(Color::DarkGray)}
         );
 
         let layout = Layout::default()
