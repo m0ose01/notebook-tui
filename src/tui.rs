@@ -18,7 +18,7 @@ pub fn run(library: &Folder) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn draw(terminal: &mut DefaultTerminal, folder: &Folder) -> Result<(), Box<dyn Error>> {
+fn draw(terminal: &mut DefaultTerminal, folder: &Folder) -> Result<AppAction, Box<dyn Error>> {
     let mut list_state = ListState::default().with_selected(Some(0));
     loop {
         terminal.draw(|frame| frame.render_stateful_widget(folder, frame.area(), &mut list_state))?;
@@ -35,14 +35,23 @@ fn draw(terminal: &mut DefaultTerminal, folder: &Folder) -> Result<(), Box<dyn E
                     note.edit("nvim");
                     *terminal = ratatui::init();
                 } else if let Some(folder) = folder.folders.get(idx - folder.notes.len()) {
-                    draw(terminal, folder)?;
+                    match draw(terminal, folder)? {
+                        AppAction::Continue => { continue; },
+                        AppAction::Exit => { break; }
+                    }
                 }
             },
             MenuAction::Back => { break },
+            MenuAction::Quit => { return Ok(AppAction::Exit) }
             _ => { todo!() }
         }
     }
-    Ok(())
+    Ok(AppAction::Continue)
+}
+
+enum AppAction {
+    Exit,
+    Continue,
 }
 
 enum MenuAction {
@@ -69,6 +78,7 @@ fn handle_input() -> Option<MenuAction> {
         KeyEvent {code: KeyCode::Char('l'), ..} => Some(MenuAction::SelectItem),
         KeyEvent {code: KeyCode::Backspace, ..} => Some(MenuAction::Back),
         KeyEvent {code: KeyCode::Char('h'), ..} => Some(MenuAction::Back),
+        KeyEvent {code: KeyCode::Char('q'), ..} => Some(MenuAction::Quit),
         _ => None,
     }
 }
@@ -89,18 +99,18 @@ impl StatefulWidget for &Folder {
             |(idx, item)| if idx == state.selected().unwrap() {item.fg(Color::Red)} else {item.fg(Color::DarkGray)}
         );
 
+        let instructions_text = "Up: [j, Up].
+Select Item: [l, Enter].
+Go Up Level: [h, Backspace]
+Quit: [q]";
         let layout = Layout::default()
             .constraints(vec![
-                Constraint::Percentage(10),
-                Constraint::Percentage(90),
+                Constraint::Min((instructions_text.lines().count() + 2) as u16),
+                Constraint::Percentage(100),
             ])
             .split(area);
 
-        let instructions = Paragraph::new(
-            "Use the up/down or j/k keys to navigate.
-Select an item using the enter or 'l' keys.
-Go back up a level using the backspace or 'h' keys."
-        )
+        let instructions = Paragraph::new(instructions_text)
             .alignment(Alignment::Center)
             .dark_gray()
             .block(
