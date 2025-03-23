@@ -22,27 +22,55 @@ fn draw(terminal: &mut DefaultTerminal, folder: &Folder) -> Result<(), Box<dyn E
     let mut list_state = ListState::default().with_selected(Some(0));
     loop {
         terminal.draw(|frame| frame.render_stateful_widget(folder, frame.area(), &mut list_state))?;
-        if let Event::Key(key_event) = event::read()? {
-            match key_event {
-                KeyEvent {code: KeyCode::Up, ..} => { list_state.select_previous(); },
-                KeyEvent {code: KeyCode::Down, ..} => { list_state.select_next(); },
-                KeyEvent {code: KeyCode::Char('k'), ..} => { list_state.select_previous(); },
-                KeyEvent {code: KeyCode::Char('j'), ..} => { list_state.select_next(); },
-                KeyEvent {code: KeyCode::Enter, ..} => {
-                    let idx = list_state.selected().ok_or("No item selected")?;
-                    if let Some(note) = folder.notes.get(idx) {
-                        ratatui::restore();
-                        note.edit("nvim");
-                        *terminal = ratatui::init();
-                    } else if let Some(folder) = folder.folders.get(idx - folder.notes.len()) {
-                        draw(terminal, folder)?;
-                    }
-                },
-                _ => { break },
-            }
+        let Some(action) = handle_input() else {
+            continue;
+        };
+        match action {
+            MenuAction::ScrollUp => { list_state.select_previous() },
+            MenuAction::ScrollDown => { list_state.select_next() },
+            MenuAction::SelectItem => {
+                let idx = list_state.selected().ok_or("No item selected")?;
+                if let Some(note) = folder.notes.get(idx) {
+                    ratatui::restore();
+                    note.edit("nvim");
+                    *terminal = ratatui::init();
+                } else if let Some(folder) = folder.folders.get(idx - folder.notes.len()) {
+                    draw(terminal, folder)?;
+                }
+            },
+            MenuAction::Back => { break },
+            _ => { todo!() }
         }
     }
     Ok(())
+}
+
+enum MenuAction {
+    ScrollUp,
+    ScrollDown,
+    SelectItem,
+    AddNote,
+    AddFolder,
+    Back,
+    Quit,
+}
+
+fn handle_input() -> Option<MenuAction> {
+    let Event::Key(key_event) = event::read().ok()? else {
+        return None;
+    };
+
+    match key_event {
+        KeyEvent {code: KeyCode::Up, ..} => Some(MenuAction::ScrollUp),
+        KeyEvent {code: KeyCode::Char('k'), ..} => Some(MenuAction::ScrollUp),
+        KeyEvent {code: KeyCode::Down, ..} => Some(MenuAction::ScrollDown),
+        KeyEvent {code: KeyCode::Char('j'), ..} => Some(MenuAction::ScrollDown),
+        KeyEvent {code: KeyCode::Enter, ..} => Some(MenuAction::SelectItem),
+        KeyEvent {code: KeyCode::Char('l'), ..} => Some(MenuAction::SelectItem),
+        KeyEvent {code: KeyCode::Backspace, ..} => Some(MenuAction::Back),
+        KeyEvent {code: KeyCode::Char('h'), ..} => Some(MenuAction::Back),
+        _ => None,
+    }
 }
 
 impl StatefulWidget for &Folder {
@@ -70,7 +98,8 @@ impl StatefulWidget for &Folder {
 
         let instructions = Paragraph::new(
             "Use the up/down or j/k keys to navigate.
-Select an item using the enter key."
+Select an item using the enter or 'l' keys.
+Go back up a level using the backspace or 'h' keys."
         )
             .alignment(Alignment::Center)
             .dark_gray()
