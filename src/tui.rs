@@ -13,12 +13,14 @@ use crate::note::Folder;
 
 pub struct App {
     library: Folder,
+    editor: String,
 }
 
 impl App {
-    pub fn new(library: Folder) -> Self {
+    pub fn new(library: Folder, editor: &str) -> Self {
         App {
             library,
+            editor: editor.to_owned(),
         }
     }
 
@@ -40,7 +42,7 @@ impl App {
                     let idx = list_state.selected().ok_or("No item selected")?;
                     if let Some(note) = current_folder.notes.get(idx) {
                         ratatui::restore();
-                        note.edit("nvim");
+                        note.edit(&self.editor);
                         *terminal = ratatui::init();
                     } else if let Some(folder) = current_folder.folders.get(idx - current_folder.notes.len()) {
                         folder_stack.push(folder);

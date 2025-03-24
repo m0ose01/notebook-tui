@@ -56,7 +56,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         let library = Folder::open_library(&subcommand_args.name)?;
 
         let mut terminal = ratatui::init();
-        let app = App::new(library);
+        let editor = &subcommand_args.editor.clone().unwrap_or("nvim".to_owned());
+        let app = App::new(library, &editor);
         app.run(&mut terminal)?;
         ratatui::restore();
     }

@@ -26,5 +26,7 @@ pub struct NewArgs {
 #[derive(Parser)]
 pub struct OpenArgs {
     pub name: String,
+    #[arg(short, long)]
+    pub editor: Option<String>,
 }
 
