@@ -11,47 +11,70 @@ use ratatui::{
 };
 use crate::note::Folder;
 
-pub fn run(library: &Folder) -> Result<(), Box<dyn Error>> {
-    let mut terminal = ratatui::init();
-    draw(&mut terminal, library)?;
-    ratatui::restore();
-    Ok(())
+pub struct App {
+    library: Folder,
 }
 
-fn draw(terminal: &mut DefaultTerminal, folder: &Folder) -> Result<AppAction, Box<dyn Error>> {
-    let mut list_state = ListState::default().with_selected(Some(0));
-    loop {
-        terminal.draw(|frame| frame.render_stateful_widget(folder, frame.area(), &mut list_state))?;
-        let Some(action) = handle_input() else {
-            continue;
-        };
-        match action {
-            MenuAction::ScrollUp => { list_state.select_previous() },
-            MenuAction::ScrollDown => { list_state.select_next() },
-            MenuAction::SelectItem => {
-                let idx = list_state.selected().ok_or("No item selected")?;
-                if let Some(note) = folder.notes.get(idx) {
-                    ratatui::restore();
-                    note.edit("nvim");
-                    *terminal = ratatui::init();
-                } else if let Some(folder) = folder.folders.get(idx - folder.notes.len()) {
-                    match draw(terminal, folder)? {
-                        AppAction::Continue => { continue; },
-                        AppAction::Exit => { break; }
-                    }
-                }
-            },
-            MenuAction::Back => { break },
-            MenuAction::Quit => { return Ok(AppAction::Exit) }
-            _ => { todo!() }
+impl App {
+    pub fn new(library: Folder) -> Self {
+        App {
+            library,
         }
     }
-    Ok(AppAction::Continue)
-}
 
-enum AppAction {
-    Exit,
-    Continue,
+    pub fn run(&self, terminal: &mut DefaultTerminal) -> Result<(), Box<dyn Error>> {
+        let mut folder_stack: Vec<&Folder> = Vec::with_capacity(5);
+        folder_stack.push(&self.library);
+
+        let mut list_state = ListState::default().with_selected(Some(0));
+
+        while let Some(current_folder) = folder_stack.last() {
+            terminal.draw(|frame| frame.render_stateful_widget(*current_folder, frame.area(), &mut list_state))?;
+            let Some(action) = Self::get_input() else {
+                continue;
+            };
+            match action {
+                MenuAction::ScrollUp => { list_state.select_previous() },
+                MenuAction::ScrollDown => { list_state.select_next() },
+                MenuAction::SelectItem => {
+                    let idx = list_state.selected().ok_or("No item selected")?;
+                    if let Some(note) = current_folder.notes.get(idx) {
+                        ratatui::restore();
+                        note.edit("nvim");
+                        *terminal = ratatui::init();
+                    } else if let Some(folder) = current_folder.folders.get(idx - current_folder.notes.len()) {
+                        folder_stack.push(folder);
+                    }
+                },
+                MenuAction::Back => { folder_stack.pop(); },
+                MenuAction::Quit => { }
+                _ => { todo!() }
+            }
+        }
+        Ok(())
+    }
+
+    fn get_input() -> Option<MenuAction> {
+        let Event::Key(key_event) = event::read().ok()? else {
+            return None;
+        };
+
+        match key_event {
+            KeyEvent {code: KeyCode::Up, ..} => Some(MenuAction::ScrollUp),
+            KeyEvent {code: KeyCode::Char('k'), ..} => Some(MenuAction::ScrollUp),
+            KeyEvent {code: KeyCode::Down, ..} => Some(MenuAction::ScrollDown),
+            KeyEvent {code: KeyCode::Char('j'), ..} => Some(MenuAction::ScrollDown),
+            KeyEvent {code: KeyCode::Enter, ..} => Some(MenuAction::SelectItem),
+            KeyEvent {code: KeyCode::Char('l'), ..} => Some(MenuAction::SelectItem),
+            KeyEvent {code: KeyCode::Backspace, ..} => Some(MenuAction::Back),
+            KeyEvent {code: KeyCode::Char('h'), ..} => Some(MenuAction::Back),
+            KeyEvent {code: KeyCode::Char('q'), ..} => Some(MenuAction::Quit),
+            KeyEvent {code: KeyCode::Char('n'), ..} => Some(MenuAction::AddNote),
+            KeyEvent {code: KeyCode::Char('N'), ..} => Some(MenuAction::AddFolder),
+            _ => None,
+        }
+    }
+
 }
 
 enum MenuAction {
@@ -62,27 +85,6 @@ enum MenuAction {
     AddFolder,
     Back,
     Quit,
-}
-
-fn handle_input() -> Option<MenuAction> {
-    let Event::Key(key_event) = event::read().ok()? else {
-        return None;
-    };
-
-    match key_event {
-        KeyEvent {code: KeyCode::Up, ..} => Some(MenuAction::ScrollUp),
-        KeyEvent {code: KeyCode::Char('k'), ..} => Some(MenuAction::ScrollUp),
-        KeyEvent {code: KeyCode::Down, ..} => Some(MenuAction::ScrollDown),
-        KeyEvent {code: KeyCode::Char('j'), ..} => Some(MenuAction::ScrollDown),
-        KeyEvent {code: KeyCode::Enter, ..} => Some(MenuAction::SelectItem),
-        KeyEvent {code: KeyCode::Char('l'), ..} => Some(MenuAction::SelectItem),
-        KeyEvent {code: KeyCode::Backspace, ..} => Some(MenuAction::Back),
-        KeyEvent {code: KeyCode::Char('h'), ..} => Some(MenuAction::Back),
-        KeyEvent {code: KeyCode::Char('q'), ..} => Some(MenuAction::Quit),
-        KeyEvent {code: KeyCode::Char('n'), ..} => Some(MenuAction::AddNote),
-        KeyEvent {code: KeyCode::Char('N'), ..} => Some(MenuAction::AddFolder),
-        _ => None,
-    }
 }
 
 impl StatefulWidget for &Folder {

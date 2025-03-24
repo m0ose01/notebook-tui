@@ -6,10 +6,12 @@ mod utils;
 use std::error::Error;
 
 use clap::Parser;
+use ratatui;
 
 use crate::{
     note::{Folder, LibraryBuilder},
     cli::{Args, Commands},
+    tui::{App},
 };
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -52,7 +54,11 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     if let Commands::Open(subcommand_args) = &args.command {
         let library = Folder::open_library(&subcommand_args.name)?;
-        tui::run(&library)?;
+
+        let mut terminal = ratatui::init();
+        let app = App::new(library);
+        app.run(&mut terminal)?;
+        ratatui::restore();
     }
 
     Ok(())
