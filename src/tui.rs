@@ -81,11 +81,6 @@ enum MenuAction {
     Quit,
 }
 
-enum AppAction {
-    Continue,
-    Quit,
-}
-
 impl StatefulWidget for &mut Folder {
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut ListState) {
         let notes_items = self.notes.iter().map(
