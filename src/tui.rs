@@ -11,27 +11,14 @@ use ratatui::{
 };
 use crate::note::Folder;
 
-pub struct App {
-    library: Folder,
-    editor: String,
-}
+impl Folder {
 
-impl App {
-    pub fn new(library: Folder, editor: &str) -> Self {
-        App {
-            library,
-            editor: editor.to_owned(),
-        }
-    }
-
-    pub fn run(&self, terminal: &mut DefaultTerminal) -> Result<(), Box<dyn Error>> {
-        let mut folder_stack: Vec<&Folder> = Vec::with_capacity(5);
-        folder_stack.push(&self.library);
-
+    pub fn run(&mut self, terminal: &mut DefaultTerminal, editor: &str) -> Result<bool, Box<dyn Error>> {
         let mut list_state = ListState::default().with_selected(Some(0));
+        let mut continue_app = true;
 
-        while let Some(current_folder) = folder_stack.last() {
-            terminal.draw(|frame| frame.render_stateful_widget(*current_folder, frame.area(), &mut list_state))?;
+        while continue_app {
+            terminal.draw(|frame| frame.render_stateful_widget(&mut *self, frame.area(), &mut list_state))?;
             let Some(action) = Self::get_input() else {
                 continue;
             };
@@ -40,20 +27,25 @@ impl App {
                 MenuAction::ScrollDown => { list_state.select_next() },
                 MenuAction::SelectItem => {
                     let idx = list_state.selected().ok_or("No item selected")?;
-                    if let Some(note) = current_folder.notes.get(idx) {
+                    if let Some(note) = self.notes.get(idx) {
                         ratatui::restore();
-                        note.edit(&self.editor);
+                        note.edit(editor);
                         *terminal = ratatui::init();
-                    } else if let Some(folder) = current_folder.folders.get(idx - current_folder.notes.len()) {
-                        folder_stack.push(folder);
+                    } else if let Some(folder) = self.folders.get_mut(idx - self.notes.len()) {
+                        continue_app = folder.run(terminal, editor)?;
                     }
                 },
-                MenuAction::Back => { folder_stack.pop(); },
-                MenuAction::Quit => { }
-                _ => { todo!() }
+                MenuAction::AddNote => {
+                    self.add_note("New Note", vec![], "John Smith", "2025/03/25")?;
+                },
+                MenuAction::AddFolder => {
+                    self.add_folder("New Folder")?;
+                }
+                MenuAction::Back => { break; },
+                MenuAction::Quit => { return Ok(false); }
             }
         }
-        Ok(())
+        Ok(true)
     }
 
     fn get_input() -> Option<MenuAction> {
@@ -89,7 +81,12 @@ enum MenuAction {
     Quit,
 }
 
-impl StatefulWidget for &Folder {
+enum AppAction {
+    Continue,
+    Quit,
+}
+
+impl StatefulWidget for &mut Folder {
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut ListState) {
         let notes_items = self.notes.iter().map(
             |note| ListItem::new(note.title().to_owned()).bg(Color::Gray)
@@ -108,7 +105,9 @@ impl StatefulWidget for &Folder {
         let instructions_text = "Up: [j, Up].
 Select Item: [l, Enter].
 Go Up Level: [h, Backspace]
-Quit: [q]";
+Quit: [q]
+Add Note: [n]
+Add Folder: [N]";
         let layout = Layout::default()
             .constraints(vec![
                 Constraint::Min((instructions_text.lines().count() + 2) as u16),

@@ -11,7 +11,6 @@ use ratatui;
 use crate::{
     note::{Folder, LibraryBuilder},
     cli::{Args, Commands},
-    tui::{App},
 };
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -53,12 +52,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     if let Commands::Open(subcommand_args) = &args.command {
-        let library = Folder::open_library(&subcommand_args.name)?;
+        let mut library = Folder::open_library(&subcommand_args.name)?;
 
         let mut terminal = ratatui::init();
         let editor = &subcommand_args.editor.clone().unwrap_or("nvim".to_owned());
-        let app = App::new(library, &editor);
-        app.run(&mut terminal)?;
+        library.run(&mut terminal, editor)?;
         ratatui::restore();
     }
 

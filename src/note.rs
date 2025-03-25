@@ -11,7 +11,7 @@ pub struct Folder {
     metadata: FolderMetadata,
     pub folders: Vec<Folder>, // TODO: add a nicer way of getting notes
     pub notes: Vec<Note>, // see above
-    library: bool,
+    pub library: bool,
     path: PathBuf,
 }
 
