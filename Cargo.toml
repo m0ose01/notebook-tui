@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 clap = { version = "4.5.32", features = ["derive"] }
+jiff = "0.2.5"
 ratatui = "0.29.0"
 serde = { version = "1.0.219", features = ["derive"] }
 toml = "0.8.20"

@@ -3,6 +3,7 @@ use std::{
     error::Error,
 };
 
+use jiff::Zoned;
 use ratatui::{
     crossterm::event::{self, Event, KeyEvent, KeyCode},
     DefaultTerminal,
@@ -52,10 +53,7 @@ impl Folder {
                     stdin.read_line(&mut author).expect("Error reading line");
                     author.retain(|c| !c.is_whitespace());
 
-                    println!("Enter Date");
-                    let mut date = String::new();
-                    stdin.read_line(&mut date).expect("Error reading line");
-                    date.retain(|c| !c.is_whitespace());
+                    let date = Zoned::now();
 
                     self.add_note(&title, vec![], &author, &date)?;
                     *terminal = ratatui::init();

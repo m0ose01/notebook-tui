@@ -1,8 +1,11 @@
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::str::FromStr;
 
+use jiff::Zoned;
 use serde::{Deserialize, Serialize};
+use toml::value::Datetime;
 
 use crate::utils::CaseExt;
 
@@ -71,10 +74,11 @@ impl Folder {
         )
     }
 
-    pub fn add_note(&mut self, title: &str, tags: Vec<String>, author: &str, date: &str) -> std::io::Result<()> {
+    pub fn add_note(&mut self, title: &str, tags: Vec<String>, author: &str, date: &Zoned) -> std::io::Result<()> {
+        let date = Datetime::from_str(&date.timestamp().to_string()).expect(&format!("Could not parse date: {}", &date.to_string()));
         let mut note = Note {
             path: self.path.join(title.to_owned().to_kebab_case()),
-            metadata: NoteMetadata {title: title.to_owned(), tags, author: author.to_owned(), date: date.to_owned()},
+            metadata: NoteMetadata {title: title.to_owned(), tags, author: author.to_owned(), date},
         };
         note.initialise()?;
         self.notes.push(note);
@@ -199,5 +203,5 @@ struct NoteMetadata {
     title: String,
     tags: Vec<String>,
     author: String, // TODO: implement an author type
-    date: String, // TODO: change this to a date type from a suitable crate
+    date: Datetime,
 }
