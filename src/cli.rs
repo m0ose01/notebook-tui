@@ -21,6 +21,8 @@ pub struct NewArgs {
     pub name: String,
     #[arg(short, long)]
     pub path: Option<PathBuf>,
+    #[arg(short, long)]
+    pub editor: Option<String>,
 }
 
 #[derive(Parser)]

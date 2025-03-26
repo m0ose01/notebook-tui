@@ -43,12 +43,12 @@ fn main() -> Result<(), Box<dyn Error>> {
 
         let mut library = library.build()?;
 
-        let n_items = 5;
-        for item_idx in 0..n_items {
-            library.add_folder(&format!("Nested Folder {item_idx}"))?;
-            library.add_note(&format!("Top Level Note {item_idx}"), vec!["Physiology".to_owned()], "John Smith", "2025/03/22")?;
-            library.folders[item_idx].add_note(&format!("Nested Note {item_idx}"), vec!["Biochemistry".to_owned()], "John Smith", "2025/03/23")?;
+        if let Some(editor) = &subcommand_args.editor {
+            let mut terminal = ratatui::init();
+            library.run(&mut terminal, editor)?;
+            ratatui::restore();
         }
+
     }
 
     if let Commands::Open(subcommand_args) = &args.command {

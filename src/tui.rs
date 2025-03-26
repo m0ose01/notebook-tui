@@ -1,4 +1,7 @@
-use std::error::Error;
+use std::{
+    io::stdin,
+    error::Error,
+};
 
 use ratatui::{
     crossterm::event::{self, Event, KeyEvent, KeyCode},
@@ -26,7 +29,7 @@ impl Folder {
                 MenuAction::ScrollUp => { list_state.select_previous() },
                 MenuAction::ScrollDown => { list_state.select_next() },
                 MenuAction::SelectItem => {
-                    let idx = list_state.selected().ok_or("No item selected")?;
+                    let idx = list_state.selected().unwrap_or(0);
                     if let Some(note) = self.notes.get(idx) {
                         ratatui::restore();
                         note.edit(editor);
@@ -36,10 +39,32 @@ impl Folder {
                     }
                 },
                 MenuAction::AddNote => {
-                    self.add_note("New Note", vec![], "John Smith", "2025/03/25")?;
+                    ratatui::restore();
+
+                    let stdin = stdin();
+                    println!("Enter Title");
+                    let mut title = String::new();
+                    stdin.read_line(&mut title).expect("Error reading line");
+
+                    println!("Enter Author");
+                    let mut author = String::new();
+                    stdin.read_line(&mut author).expect("Error reading line");
+
+                    println!("Enter Date");
+                    let mut date = String::new();
+                    stdin.read_line(&mut date).expect("Error reading line");
+
+                    self.add_note(&title, vec![], &author, &date)?;
+                    *terminal = ratatui::init();
                 },
                 MenuAction::AddFolder => {
-                    self.add_folder("New Folder")?;
+                    ratatui::restore();
+                    println!("Enter Title");
+                    let mut title = String::new();
+                    stdin().read_line(&mut title).expect("Error reading line");
+                    self.add_folder(&title)?;
+
+                    *terminal = ratatui::init();
                 }
                 MenuAction::Back => { break; },
                 MenuAction::Quit => { return Ok(false); }
@@ -94,7 +119,7 @@ impl StatefulWidget for &mut Folder {
         );
 
         let items = notes_items.chain(folder_items).enumerate().map(
-            |(idx, item)| if idx == state.selected().unwrap() {item.fg(Color::Red)} else {item.fg(Color::DarkGray)}
+            |(idx, item)| if idx == state.selected().unwrap_or(0) {item.fg(Color::Red)} else {item.fg(Color::DarkGray)}
         );
 
         let instructions_text = "Up: [j, Up].
