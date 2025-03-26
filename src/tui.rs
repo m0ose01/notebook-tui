@@ -45,14 +45,17 @@ impl Folder {
                     println!("Enter Title");
                     let mut title = String::new();
                     stdin.read_line(&mut title).expect("Error reading line");
+                    title.retain(|c| !c.is_whitespace());
 
                     println!("Enter Author");
                     let mut author = String::new();
                     stdin.read_line(&mut author).expect("Error reading line");
+                    author.retain(|c| !c.is_whitespace());
 
                     println!("Enter Date");
                     let mut date = String::new();
                     stdin.read_line(&mut date).expect("Error reading line");
+                    date.retain(|c| !c.is_whitespace());
 
                     self.add_note(&title, vec![], &author, &date)?;
                     *terminal = ratatui::init();
@@ -62,6 +65,7 @@ impl Folder {
                     println!("Enter Title");
                     let mut title = String::new();
                     stdin().read_line(&mut title).expect("Error reading line");
+                    title.retain(|c| !c.is_whitespace());
                     self.add_folder(&title)?;
 
                     *terminal = ratatui::init();
