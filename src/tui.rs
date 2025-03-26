@@ -124,12 +124,12 @@ impl StatefulWidget for &mut Folder {
             |(idx, item)| if idx == state.selected().unwrap_or(0) {item.fg(Color::Red)} else {item.fg(Color::DarkGray)}
         );
 
-        let instructions_text = "Up: [j, Up].
-Select Item: [l, Enter].
-Go Up Level: [h, Backspace]
-Quit: [q]
-Add Note: [n]
-Add Folder: [N]";
+        let instructions_text = "Up: <j>, <Up>.
+Select Item: <l>, <Enter>.
+Go Up Level: <h>, <Backspace>
+Quit: <q>
+Add Note: <n>
+Add Folder: <N>";
         let layout = Layout::default()
             .constraints(vec![
                 Constraint::Min((instructions_text.lines().count() + 2) as u16),
