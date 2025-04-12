@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::str::FromStr;
 
-use jiff::Zoned;
+use jiff::{Zoned, Timestamp};
 use serde::{Deserialize, Serialize};
 use toml::value::Datetime;
 
@@ -195,6 +195,16 @@ impl Note {
 
     pub fn title(&self) -> &str {
         &self.metadata.title
+    }
+
+    pub fn author(&self) -> &str {
+        &self.metadata.author
+    }
+
+    pub fn date(&self) -> Result<Timestamp, jiff::Error> {
+        Timestamp::from_str(
+            &self.metadata.date.to_string()
+        )
     }
 }
 

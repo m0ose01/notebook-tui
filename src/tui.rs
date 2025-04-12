@@ -8,17 +8,17 @@ use ratatui::{
     crossterm::event::{self, Event, KeyEvent, KeyCode},
     DefaultTerminal,
     layout::{Layout, Constraint},
-    prelude::{Buffer, Rect},
+    prelude::{Buffer, Rect, Span},
     style::{Color, Stylize},
     layout::Alignment,
-    widgets::{Widget, StatefulWidget, Block, List, ListItem, ListState, Paragraph},
+    widgets::{Widget, StatefulWidget, Block, Table, Row, Cell, TableState, Paragraph},
 };
 use crate::note::Folder;
 
 impl Folder {
 
     pub fn run(&mut self, terminal: &mut DefaultTerminal, editor: &str) -> Result<bool, Box<dyn Error>> {
-        let mut list_state = ListState::default().with_selected(Some(0));
+        let mut list_state = TableState::default().with_selected(Some(0));
         let mut continue_app = true;
 
         while continue_app {
@@ -109,20 +109,34 @@ enum MenuAction {
 }
 
 impl StatefulWidget for &mut Folder {
-    fn render(self, area: Rect, buf: &mut Buffer, state: &mut ListState) {
+    fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
+        let row_height = 2;
         let notes_items = self.notes.iter().map(
-            |note| ListItem::new(note.title().to_owned()).bg(Color::Gray)
+            |note| Row::new(vec![
+                Cell::from(note.title()),
+                Cell::from(note.author()),
+                Cell::from(note.date().unwrap().to_string()),
+            ]).height(row_height)
         );
 
         let folder_items = self.folders.iter().map(
             |folder| {
-                ListItem::new(folder.title().to_owned()).bg(Color::LightYellow)
+                Row::new(vec![
+                    Span::from(folder.title()),
+                ]).height(row_height)
             }
         );
 
+        let titles = Row::new(vec![
+            Span::from("Title"),
+            Span::from("Author"),
+            Span::from("Date"),
+        ]).bg(Color::DarkGray).fg(Color::White).height(row_height);
+
         let items = notes_items.chain(folder_items).enumerate().map(
-            |(idx, item)| if idx == state.selected().unwrap_or(0) {item.fg(Color::Red)} else {item.fg(Color::DarkGray)}
+            |(idx, item)| if idx == state.selected().unwrap_or(0) {item.bg(Color::Gray).fg(Color::Black)} else {item}
         );
+        let items = std::iter::once(titles).chain(items);
 
         let instructions_text = "Up: <j>, <Up>.
 Select Item: <l>, <Enter>.
@@ -144,21 +158,20 @@ Add Folder: <N>";
                 Block::bordered()
                     .title_top("Instructions")
                     .title_alignment(Alignment::Center)
-                    .red()
+                    .gray()
                     .bold()
-                    .on_white()
             );
-        let list = List::new(items).block(
+        let widths: Vec<u16> = vec![];
+        let list = Table::new(items, widths).block(
             Block::bordered()
                 .title_top(self.title())
                 .title_alignment(Alignment::Center)
-                .red()
+                .gray()
                 .bold()
-                .on_white()
         );
         Widget::render(instructions, layout[0], buf);
         StatefulWidget::render(list, layout[1], buf, state)
     }
 
-    type State = ListState;
+    type State = TableState;
 }
